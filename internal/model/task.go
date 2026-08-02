@@ -1,21 +1,6 @@
 package model
 
-type Status string
-
-const (
-	ToDo       Status = "ToDo"
-	InProgress Status = "In Progress"
-	Done       Status = "Done"
-)
-
-type Priority string
-
-const (
-	Low    Priority = "LOW"
-	Medium Priority = "MEDIUM"
-	High   Priority = "HIGH"
-)
-
+// Task holds all the information about a single to-do item.
 type Task struct {
 	ID          int
 	Title       string
