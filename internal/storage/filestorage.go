@@ -52,7 +52,7 @@ func (f *FileStorage) Save(data []byte) error {
 	return nil
 }
 
-// Load loads data from file.
+// Load loads data from the storage file.
 func (f *FileStorage) Load() (data []byte, err error) {
 	data, err = os.ReadFile(f.path)
 	if err != nil {
