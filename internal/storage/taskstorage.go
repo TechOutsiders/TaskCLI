@@ -26,31 +26,7 @@ func NewTaskStorage(path string) (*TaskStorage, error) {
 		fileStorage: fs,
 	}
 
-	if err := ts.initializeFile(); err != nil {
-		return nil, fmt.Errorf("initializing storage file: %w", err)
-	}
-
 	return ts, nil
-}
-
-// initializeFile checks and initializes the file with an empty array if needed.
-// It handles empty or corrupted JSON files.
-func (ts *TaskStorage) initializeFile() error {
-	data, err := ts.fileStorage.Load()
-	if err != nil {
-		return ts.saveTasks([]model.Task{})
-	}
-
-	if len(data) == 0 {
-		return ts.saveTasks([]model.Task{})
-	}
-
-	var tasks []model.Task
-	if err := json.Unmarshal(data, &tasks); err != nil {
-		return ts.saveTasks([]model.Task{})
-	}
-
-	return nil
 }
 
 // loadTasks reads all tasks from the storage file.
@@ -62,7 +38,7 @@ func (ts *TaskStorage) loadTasks() ([]model.Task, error) {
 	}
 
 	if len(data) == 0 {
-		return []model.Task{}, nil
+		return nil, fmt.Errorf("storage file is empty")
 	}
 
 	var tasks []model.Task
@@ -172,10 +148,21 @@ func (ts *TaskStorage) UpdateTask(task *model.Task) error {
 
 	for i, t := range tasks {
 		if t.ID == task.ID {
-			tasks[i] = *task
+			// Updating only filled-in fields
+			if task.Title != "" {
+				tasks[i].Title = task.Title
+			}
+			if task.Description != "" {
+				tasks[i].Description = task.Description
+			}
+			if task.Status != "" {
+				tasks[i].Status = task.Status
+			}
+			if task.Priority != "" {
+				tasks[i].Priority = task.Priority
+			}
 			return ts.saveTasks(tasks)
 		}
 	}
-
 	return fmt.Errorf("task with ID %s not found", task.ID)
 }
