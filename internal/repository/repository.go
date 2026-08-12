@@ -1,25 +1,26 @@
-package storage
+package repository
 
 import (
 	"encoding/json"
 	"fmt"
 
 	"github.com/TechOutsiders/TaskCLI/internal/model"
+	"github.com/TechOutsiders/TaskCLI/internal/storage"
 	"github.com/google/uuid"
 )
 
 // TaskStorage implements the service.Repository interface using FileStorage.
 // It provides CRUD operations for tasks.
 type TaskStorage struct {
-	fileStorage *FileStorage
+	fileStorage *storage.FileStorage
 }
 
 // NewTaskStorage creates a new TaskStorage instance.
 // It ensures the storage file exists and is properly initialized.
 func NewTaskStorage(path string) (*TaskStorage, error) {
-	fs, err := NewFileStorage(path)
+	fs, err := storage.NewFileStorage(path)
 	if err != nil {
-		return nil, fmt.Errorf("Creating file storage: %w", err)
+		return nil, fmt.Errorf("creating file storage: %w", err)
 	}
 
 	ts := &TaskStorage{
@@ -34,7 +35,7 @@ func NewTaskStorage(path string) (*TaskStorage, error) {
 func (ts *TaskStorage) loadTasks() ([]model.Task, error) {
 	data, err := ts.fileStorage.Load()
 	if err != nil {
-		return nil, fmt.Errorf("Loading tasks: %w", err)
+		return nil, fmt.Errorf("loading tasks: %w", err)
 	}
 
 	if len(data) == 0 {
@@ -42,8 +43,8 @@ func (ts *TaskStorage) loadTasks() ([]model.Task, error) {
 	}
 
 	var tasks []model.Task
-	if err := json.Unmarshal(data, &tasks); err != nil {
-		return nil, fmt.Errorf("Unmarshaling tasks: %w", err)
+	if err = json.Unmarshal(data, &tasks); err != nil {
+		return nil, fmt.Errorf("unmarshaling tasks: %w", err)
 	}
 
 	return tasks, nil
@@ -54,11 +55,11 @@ func (ts *TaskStorage) loadTasks() ([]model.Task, error) {
 func (ts *TaskStorage) saveTasks(tasks []model.Task) error {
 	data, err := json.MarshalIndent(tasks, "", "  ")
 	if err != nil {
-		return fmt.Errorf("Marshaling tasks: %w", err)
+		return fmt.Errorf("marshaling tasks: %w", err)
 	}
 
 	if err := ts.fileStorage.Save(data); err != nil {
-		return fmt.Errorf("Saving tasks: %w", err)
+		return fmt.Errorf("saving tasks: %w", err)
 	}
 
 	return nil
@@ -70,7 +71,7 @@ func (ts *TaskStorage) GetTasks() ([]model.Task, error) {
 	return ts.loadTasks()
 }
 
-// GetTask retrieves a single task by its UUID.
+// GetTask retrieves a single task by its ID.
 // Returns an error if the task is not found.
 func (ts *TaskStorage) GetTask(id uuid.UUID) (*model.Task, error) {
 	tasks, err := ts.loadTasks()
@@ -84,13 +85,12 @@ func (ts *TaskStorage) GetTask(id uuid.UUID) (*model.Task, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("Task with ID %s not found", id)
+	return nil, fmt.Errorf("task with ID %s not found", id)
 }
 
 // CreateTask adds a new task to the storage.
 // Generates a new UUID if the task ID is not set.
 func (ts *TaskStorage) CreateTask(task *model.Task) error {
-
 	tasks, err := ts.loadTasks()
 	if err != nil {
 		return err
@@ -98,15 +98,16 @@ func (ts *TaskStorage) CreateTask(task *model.Task) error {
 
 	for _, t := range tasks {
 		if t.ID == task.ID {
-			return fmt.Errorf("Task with ID %s already exists", task.ID)
+			return fmt.Errorf("task with ID %s already exists", task.ID)
 		}
 	}
 
 	tasks = append(tasks, *task)
+
 	return ts.saveTasks(tasks)
 }
 
-// DeleteTask removes a task by its UUID.
+// DeleteTask removes a task by its ID.
 // Returns an error if the task cannot be loaded or if the task is not found.
 func (ts *TaskStorage) DeleteTask(id uuid.UUID) error {
 	tasks, err := ts.loadTasks()
@@ -120,33 +121,30 @@ func (ts *TaskStorage) DeleteTask(id uuid.UUID) error {
 			return ts.saveTasks(tasks)
 		}
 	}
-	return fmt.Errorf("Task with ID %s not found", id)
+
+	return fmt.Errorf("task with ID %s not found", id)
 }
 
 // UpdateTask updates an existing task with the provided data.
 // All fields of the task are persisted.
 func (ts *TaskStorage) UpdateTask(task *model.Task) error {
-
 	tasks, err := ts.loadTasks()
 	if err != nil {
 		return err
 	}
 
 	for i, t := range tasks {
-
 		if t.ID != task.ID {
 			continue
 		}
 
 		tasks[i].Title = task.Title
-
 		tasks[i].Description = task.Description
-
 		tasks[i].Status = task.Status
-
 		tasks[i].Priority = task.Priority
 
 		return ts.saveTasks(tasks)
 	}
+
 	return fmt.Errorf("task with ID %s not found", task.ID)
 }
