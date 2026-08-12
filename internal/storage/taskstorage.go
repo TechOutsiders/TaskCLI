@@ -19,7 +19,7 @@ type TaskStorage struct {
 func NewTaskStorage(path string) (*TaskStorage, error) {
 	fs, err := NewFileStorage(path)
 	if err != nil {
-		return nil, fmt.Errorf("creating file storage: %w", err)
+		return nil, fmt.Errorf("Creating file storage: %w", err)
 	}
 
 	ts := &TaskStorage{
@@ -34,16 +34,16 @@ func NewTaskStorage(path string) (*TaskStorage, error) {
 func (ts *TaskStorage) loadTasks() ([]model.Task, error) {
 	data, err := ts.fileStorage.Load()
 	if err != nil {
-		return nil, fmt.Errorf("loading tasks: %w", err)
+		return nil, fmt.Errorf("Loading tasks: %w", err)
 	}
 
 	if len(data) == 0 {
-		return nil, fmt.Errorf("storage file is empty")
+		return []model.Task{}, nil
 	}
 
 	var tasks []model.Task
 	if err := json.Unmarshal(data, &tasks); err != nil {
-		return nil, fmt.Errorf("unmarshaling tasks: %w", err)
+		return nil, fmt.Errorf("Unmarshaling tasks: %w", err)
 	}
 
 	return tasks, nil
@@ -54,11 +54,11 @@ func (ts *TaskStorage) loadTasks() ([]model.Task, error) {
 func (ts *TaskStorage) saveTasks(tasks []model.Task) error {
 	data, err := json.MarshalIndent(tasks, "", "  ")
 	if err != nil {
-		return fmt.Errorf("marshaling tasks: %w", err)
+		return fmt.Errorf("Marshaling tasks: %w", err)
 	}
 
 	if err := ts.fileStorage.Save(data); err != nil {
-		return fmt.Errorf("saving tasks: %w", err)
+		return fmt.Errorf("Saving tasks: %w", err)
 	}
 
 	return nil
@@ -84,19 +84,12 @@ func (ts *TaskStorage) GetTask(id uuid.UUID) (*model.Task, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("task with ID %s not found", id)
+	return nil, fmt.Errorf("Task with ID %s not found", id)
 }
 
 // CreateTask adds a new task to the storage.
 // Generates a new UUID if the task ID is not set.
 func (ts *TaskStorage) CreateTask(task *model.Task) error {
-	if task == nil {
-		return fmt.Errorf("task cannot be nil")
-	}
-
-	if task.ID == uuid.Nil {
-		task.ID = uuid.New()
-	}
 
 	tasks, err := ts.loadTasks()
 	if err != nil {
@@ -105,7 +98,7 @@ func (ts *TaskStorage) CreateTask(task *model.Task) error {
 
 	for _, t := range tasks {
 		if t.ID == task.ID {
-			return fmt.Errorf("task with ID %s already exists", task.ID)
+			return fmt.Errorf("Task with ID %s already exists", task.ID)
 		}
 	}
 
@@ -114,7 +107,7 @@ func (ts *TaskStorage) CreateTask(task *model.Task) error {
 }
 
 // DeleteTask removes a task by its UUID.
-// Returns an error if the task is not found.
+// Returns an error if the task cannot be loaded or if the task is not found.
 func (ts *TaskStorage) DeleteTask(id uuid.UUID) error {
 	tasks, err := ts.loadTasks()
 	if err != nil {
@@ -127,19 +120,12 @@ func (ts *TaskStorage) DeleteTask(id uuid.UUID) error {
 			return ts.saveTasks(tasks)
 		}
 	}
-	return fmt.Errorf("task with ID %s not found", id)
+	return fmt.Errorf("Task with ID %s not found", id)
 }
 
 // UpdateTask updates an existing task with the provided data.
 // All fields of the task are persisted.
 func (ts *TaskStorage) UpdateTask(task *model.Task) error {
-	if task == nil {
-		return fmt.Errorf("task cannot be nil")
-	}
-
-	if task.ID == uuid.Nil {
-		return fmt.Errorf("task ID cannot be empty")
-	}
 
 	tasks, err := ts.loadTasks()
 	if err != nil {
@@ -147,22 +133,20 @@ func (ts *TaskStorage) UpdateTask(task *model.Task) error {
 	}
 
 	for i, t := range tasks {
-		if t.ID == task.ID {
-			// Updating only filled-in fields
-			if task.Title != "" {
-				tasks[i].Title = task.Title
-			}
-			if task.Description != "" {
-				tasks[i].Description = task.Description
-			}
-			if task.Status != "" {
-				tasks[i].Status = task.Status
-			}
-			if task.Priority != "" {
-				tasks[i].Priority = task.Priority
-			}
-			return ts.saveTasks(tasks)
+
+		if t.ID != task.ID {
+			continue
 		}
+
+		tasks[i].Title = task.Title
+
+		tasks[i].Description = task.Description
+
+		tasks[i].Status = task.Status
+
+		tasks[i].Priority = task.Priority
+
+		return ts.saveTasks(tasks)
 	}
 	return fmt.Errorf("task with ID %s not found", task.ID)
 }
