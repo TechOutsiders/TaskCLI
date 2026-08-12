@@ -9,30 +9,30 @@ import (
 	"github.com/google/uuid"
 )
 
-// TaskStorage implements the [service.Repository] interface. It is
+// TasksRepository implements the [service.Repository] interface. It is
 // based on simple file storage.
-type TaskStorage struct {
+type TasksRepository struct {
 	fileStorage *storage.FileStorage
 }
 
 // NewTaskStorage creates a new *TaskStorage instance.
-func NewTaskStorage(path string) (*TaskStorage, error) {
+func NewTaskStorage(path string) (*TasksRepository, error) {
 	fs, err := storage.NewFileStorage(path)
 	if err != nil {
 		return nil, fmt.Errorf("creating file storage: %w", err)
 	}
 
-	ts := &TaskStorage{
+	ts := &TasksRepository{
 		fileStorage: fs,
 	}
 
 	return ts, nil
 }
 
-var _ service.Repository = (*TaskStorage)(nil)
+var _ service.Repository = (*TasksRepository)(nil)
 
 // GetTasks retrieves all tasks from the storage.
-func (ts *TaskStorage) GetTasks() ([]model.Task, error) {
+func (ts *TasksRepository) GetTasks() ([]model.Task, error) {
 	tasks, err := ts.fileStorage.Load()
 	if err != nil {
 		return nil, fmt.Errorf("loading tasks: %w", err)
@@ -43,7 +43,7 @@ func (ts *TaskStorage) GetTasks() ([]model.Task, error) {
 
 // GetTask retrieves a single task by its ID. It returns an error if
 // the task is not found.
-func (ts *TaskStorage) GetTask(id uuid.UUID) (*model.Task, error) {
+func (ts *TasksRepository) GetTask(id uuid.UUID) (*model.Task, error) {
 	tasks, err := ts.fileStorage.Load()
 	if err != nil {
 		return nil, fmt.Errorf("loading tasks: %w", err)
@@ -59,7 +59,7 @@ func (ts *TaskStorage) GetTask(id uuid.UUID) (*model.Task, error) {
 }
 
 // CreateTask adds a new task to the storage.
-func (ts *TaskStorage) CreateTask(task *model.Task) error {
+func (ts *TasksRepository) CreateTask(task *model.Task) error {
 	tasks, err := ts.fileStorage.Load()
 	if err != nil {
 		return fmt.Errorf("loading tasks: %w", err)
@@ -83,7 +83,7 @@ func (ts *TaskStorage) CreateTask(task *model.Task) error {
 
 // DeleteTask removes a task by its ID. It returns an error if
 // the task is not found.
-func (ts *TaskStorage) DeleteTask(id uuid.UUID) error {
+func (ts *TasksRepository) DeleteTask(id uuid.UUID) error {
 	tasks, err := ts.fileStorage.Load()
 	if err != nil {
 		return fmt.Errorf("loading tasks: %w", err)
@@ -106,7 +106,7 @@ func (ts *TaskStorage) DeleteTask(id uuid.UUID) error {
 }
 
 // UpdateTask updates an existing task with the provided data.
-func (ts *TaskStorage) UpdateTask(task *model.Task) error {
+func (ts *TasksRepository) UpdateTask(task *model.Task) error {
 	tasks, err := ts.fileStorage.Load()
 	if err != nil {
 		return fmt.Errorf("loading tasks: %w", err)
