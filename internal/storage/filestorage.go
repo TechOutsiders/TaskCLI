@@ -1,9 +1,12 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/TechOutsiders/TaskCLI/internal/model"
 )
 
 // FileStorage provides persistent storage backed by a file.
@@ -42,9 +45,14 @@ func NewFileStorage(path string) (*FileStorage, error) {
 	return &FileStorage{path: path}, nil
 }
 
-// Save writes data to the storage file.
-func (f *FileStorage) Save(data []byte) error {
-	err := os.WriteFile(f.path, data, 0o644)
+// Save saves all tasks into the storage file.
+func (f *FileStorage) Save(tasks []model.Task) (err error) {
+	data, err := json.MarshalIndent(tasks, "", " ")
+	if err != nil {
+		return fmt.Errorf("marshaling tasks: %w", err)
+	}
+
+	err = os.WriteFile(f.path, data, 0o644)
 	if err != nil {
 		return fmt.Errorf("writing to file: %w", err)
 	}
@@ -52,12 +60,17 @@ func (f *FileStorage) Save(data []byte) error {
 	return nil
 }
 
-// Load loads data from the storage file.
-func (f *FileStorage) Load() (data []byte, err error) {
-	data, err = os.ReadFile(f.path)
+// Load loads all tasks stored in the storage file.
+func (f *FileStorage) Load() (tasks []model.Task, err error) {
+	data, err := os.ReadFile(f.path)
 	if err != nil {
 		return nil, fmt.Errorf("reading from file: %w", err)
 	}
 
-	return data, nil
+	err = json.Unmarshal(data, &tasks)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshaling bytes: %w", err)
+	}
+
+	return tasks, nil
 }

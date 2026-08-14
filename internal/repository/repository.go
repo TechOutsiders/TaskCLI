@@ -1,82 +1,52 @@
 package repository
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/TechOutsiders/TaskCLI/internal/model"
+	"github.com/TechOutsiders/TaskCLI/internal/service"
 	"github.com/TechOutsiders/TaskCLI/internal/storage"
 	"github.com/google/uuid"
 )
 
-// TaskStorage implements the service.Repository interface using FileStorage.
-// It provides CRUD operations for tasks.
-type TaskStorage struct {
+// TasksRepository implements the [service.Repository] interface. It is
+// based on simple file storage.
+type TasksRepository struct {
 	fileStorage *storage.FileStorage
 }
 
-// NewTaskStorage creates a new TaskStorage instance.
-// It ensures the storage file exists and is properly initialized.
-func NewTaskStorage(path string) (*TaskStorage, error) {
+// NewTaskStorage creates a new *TaskStorage instance.
+func NewTaskStorage(path string) (*TasksRepository, error) {
 	fs, err := storage.NewFileStorage(path)
 	if err != nil {
 		return nil, fmt.Errorf("creating file storage: %w", err)
 	}
 
-	ts := &TaskStorage{
+	ts := &TasksRepository{
 		fileStorage: fs,
 	}
 
 	return ts, nil
 }
 
-// loadTasks reads all tasks from the storage file.
-// Returns an empty slice if the file is empty.
-func (ts *TaskStorage) loadTasks() ([]model.Task, error) {
-	data, err := ts.fileStorage.Load()
+var _ service.Repository = (*TasksRepository)(nil)
+
+// GetTasks retrieves all tasks from the storage.
+func (ts *TasksRepository) GetTasks() ([]model.Task, error) {
+	tasks, err := ts.fileStorage.Load()
 	if err != nil {
 		return nil, fmt.Errorf("loading tasks: %w", err)
-	}
-
-	if len(data) == 0 {
-		return []model.Task{}, nil
-	}
-
-	var tasks []model.Task
-	if err = json.Unmarshal(data, &tasks); err != nil {
-		return nil, fmt.Errorf("unmarshaling tasks: %w", err)
 	}
 
 	return tasks, nil
 }
 
-// saveTasks writes the provided tasks to the storage file.
-// It marshals the tasks to JSON with indentation.
-func (ts *TaskStorage) saveTasks(tasks []model.Task) error {
-	data, err := json.MarshalIndent(tasks, "", "  ")
+// GetTask retrieves a single task by its ID. It returns an error if
+// the task is not found.
+func (ts *TasksRepository) GetTask(id uuid.UUID) (*model.Task, error) {
+	tasks, err := ts.fileStorage.Load()
 	if err != nil {
-		return fmt.Errorf("marshaling tasks: %w", err)
-	}
-
-	if err := ts.fileStorage.Save(data); err != nil {
-		return fmt.Errorf("saving tasks: %w", err)
-	}
-
-	return nil
-}
-
-// GetTasks retrieves all tasks from the storage.
-// Returns an empty slice if no tasks exist.
-func (ts *TaskStorage) GetTasks() ([]model.Task, error) {
-	return ts.loadTasks()
-}
-
-// GetTask retrieves a single task by its ID.
-// Returns an error if the task is not found.
-func (ts *TaskStorage) GetTask(id uuid.UUID) (*model.Task, error) {
-	tasks, err := ts.loadTasks()
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading tasks: %w", err)
 	}
 
 	for _, task := range tasks {
@@ -89,11 +59,10 @@ func (ts *TaskStorage) GetTask(id uuid.UUID) (*model.Task, error) {
 }
 
 // CreateTask adds a new task to the storage.
-// Generates a new UUID if the task ID is not set.
-func (ts *TaskStorage) CreateTask(task *model.Task) error {
-	tasks, err := ts.loadTasks()
+func (ts *TasksRepository) CreateTask(task *model.Task) error {
+	tasks, err := ts.fileStorage.Load()
 	if err != nil {
-		return err
+		return fmt.Errorf("loading tasks: %w", err)
 	}
 
 	for _, t := range tasks {
@@ -104,21 +73,32 @@ func (ts *TaskStorage) CreateTask(task *model.Task) error {
 
 	tasks = append(tasks, *task)
 
-	return ts.saveTasks(tasks)
+	err = ts.fileStorage.Save(tasks)
+	if err != nil {
+		return fmt.Errorf("saving tasks: %w", err)
+	}
+
+	return nil
 }
 
-// DeleteTask removes a task by its ID.
-// Returns an error if the task cannot be loaded or if the task is not found.
-func (ts *TaskStorage) DeleteTask(id uuid.UUID) error {
-	tasks, err := ts.loadTasks()
+// DeleteTask removes a task by its ID. It returns an error if
+// the task is not found.
+func (ts *TasksRepository) DeleteTask(id uuid.UUID) error {
+	tasks, err := ts.fileStorage.Load()
 	if err != nil {
-		return err
+		return fmt.Errorf("loading tasks: %w", err)
 	}
 
 	for i, task := range tasks {
 		if task.ID == id {
 			tasks = append(tasks[:i], tasks[i+1:]...)
-			return ts.saveTasks(tasks)
+
+			err = ts.fileStorage.Save(tasks)
+			if err != nil {
+				return fmt.Errorf("saving tasks: %w", err)
+			}
+
+			return nil
 		}
 	}
 
@@ -126,11 +106,10 @@ func (ts *TaskStorage) DeleteTask(id uuid.UUID) error {
 }
 
 // UpdateTask updates an existing task with the provided data.
-// All fields of the task are persisted.
-func (ts *TaskStorage) UpdateTask(task *model.Task) error {
-	tasks, err := ts.loadTasks()
+func (ts *TasksRepository) UpdateTask(task *model.Task) error {
+	tasks, err := ts.fileStorage.Load()
 	if err != nil {
-		return err
+		return fmt.Errorf("loading tasks: %w", err)
 	}
 
 	for i, t := range tasks {
@@ -143,7 +122,12 @@ func (ts *TaskStorage) UpdateTask(task *model.Task) error {
 		tasks[i].Status = task.Status
 		tasks[i].Priority = task.Priority
 
-		return ts.saveTasks(tasks)
+		err = ts.fileStorage.Save(tasks)
+		if err != nil {
+			return fmt.Errorf("saving tasks: %w", err)
+		}
+
+		return nil
 	}
 
 	return fmt.Errorf("task with ID %s not found", task.ID)
