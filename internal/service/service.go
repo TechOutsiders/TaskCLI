@@ -130,3 +130,37 @@ func (s *Service) UpdateTask(data *UpdateTaskData) error {
 
 	return nil
 }
+
+// UpdateStatus updates the status of a task.
+func (s *Service) UpdateStatus(id uuid.UUID, status model.Status) error {
+	task, err := s.repository.GetTask(id)
+	if err != nil {
+		return fmt.Errorf("getting task: %w", err)
+	}
+
+	task.Status = status
+
+	err = s.repository.UpdateTask(task)
+	if err != nil {
+		return fmt.Errorf("updating task status: %w", err)
+	}
+
+	return nil
+}
+
+// UpdatePriority updates the priority of a task.
+func (s *Service) UpdatePriority(id uuid.UUID, priority model.Priority) error {
+	task, err := s.repository.GetTask(id)
+	if err != nil {
+		return fmt.Errorf("getting task: %w", err)
+	}
+
+	task.Priority = priority
+
+	err = s.repository.UpdateTask(task)
+	if err != nil {
+		return fmt.Errorf("updating task priority:: %w", err)
+	}
+
+	return nil
+}
