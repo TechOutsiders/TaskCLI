@@ -30,11 +30,12 @@ type Repository interface {
 	UpdateTask(task *model.Task) (err error)
 }
 
+// Service provides the business logic for the entire application.
 type Service struct {
 	repository Repository
 }
 
-// NewService creates a new Service instance.
+// NewService creates a new *Service instance.
 func NewService(repository Repository) *Service {
 	return &Service{
 		repository: repository,
@@ -55,8 +56,9 @@ func (s *Service) GetTasks() ([]model.Task, error) {
 func (s *Service) GetTask(id uuid.UUID) (task *model.Task, err error) {
 	task, err = s.repository.GetTask(id)
 	if err != nil {
-		return nil, fmt.Errorf("getting tasks: %s: %w", id, err)
+		return nil, fmt.Errorf("getting task: %s: %w", id, err)
 	}
+
 	return task, nil
 }
 
@@ -79,7 +81,8 @@ func (s *Service) CreateTask(data *CreateTaskData) (*model.Task, error) {
 		CreatedAt:   time.Now(),
 	}
 
-	if err := s.repository.CreateTask(task); err != nil {
+	err := s.repository.CreateTask(task)
+	if err != nil {
 		return nil, fmt.Errorf("creating task: %w", err)
 	}
 
@@ -88,9 +91,11 @@ func (s *Service) CreateTask(data *CreateTaskData) (*model.Task, error) {
 
 // DeleteTask deletes task by id.
 func (s *Service) DeleteTask(id uuid.UUID) (err error) {
-	if err := s.repository.DeleteTask(id); err != nil {
-		return fmt.Errorf("deleting task: %q", err)
+	err = s.repository.DeleteTask(id)
+	if err != nil {
+		return fmt.Errorf("deleting task: %w", err)
 	}
+
 	return nil
 }
 
@@ -118,7 +123,9 @@ func (s *Service) UpdateTask(data *UpdateTaskData) error {
 		task.Description = data.Description
 	}
 
-	if err := s.repository.UpdateTask(task); err != nil {
+	err = s.repository.UpdateTask(task)
+
+	if err != nil {
 		return fmt.Errorf("updating task: %w", err)
 	}
 
