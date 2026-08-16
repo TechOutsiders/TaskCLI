@@ -124,7 +124,6 @@ func (s *Service) UpdateTask(data *UpdateTaskData) error {
 	}
 
 	err = s.repository.UpdateTask(task)
-
 	if err != nil {
 		return fmt.Errorf("updating task: %w", err)
 	}
