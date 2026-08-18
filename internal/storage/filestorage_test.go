@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestFileStorageSave(t *testing.T) {
+func TestFileStorage_Save(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "tasks.json")
 
