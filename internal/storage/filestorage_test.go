@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -9,6 +10,24 @@ import (
 
 	"github.com/TechOutsiders/TaskCLI/internal/model"
 	"github.com/google/uuid"
+)
+
+type saveTestCase struct {
+	name  string
+	tasks []model.Task
+}
+
+type loadTestCase struct {
+	name     string
+	data     string
+	expected []model.Task
+}
+
+var (
+	firstCreatedAt  = time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+	secondCreatedAt = time.Date(2026, 8, 17, 13, 0, 0, 0, time.UTC)
+	firstTaskID     = uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	secondTaskID    = uuid.MustParse("22222222-2222-2222-2222-222222222222")
 )
 
 func TestFileStorage_Save(t *testing.T) {
@@ -20,51 +39,38 @@ func TestFileStorage_Save(t *testing.T) {
 		t.Fatalf("NewfileStorage() error: %v", err)
 	}
 
-	createdAt := time.Now().UTC().Round(0)
-
-	testCases := []struct {
-		name  string
-		tasks []model.Task
-	}{
+	testCases := []saveTestCase{
 		{
-			name: "one task",
+			name: "single task",
 			tasks: []model.Task{
 				{
-					ID:          uuid.New(),
+					ID:          firstTaskID,
 					Title:       "Testing",
 					Description: "Learning how to write tests",
 					Status:      model.StatusToDo,
 					Priority:    model.PriorityHigh,
-					CreatedAt:   createdAt,
+					CreatedAt:   firstCreatedAt,
 				},
 			},
 		},
 		{
-			name: "multiple task",
+			name: "two tasks",
 			tasks: []model.Task{
 				{
-					ID:          uuid.New(),
+					ID:          firstTaskID,
 					Title:       "Testing",
 					Description: "Learning how to write tests",
 					Status:      model.StatusToDo,
 					Priority:    model.PriorityHigh,
-					CreatedAt:   createdAt,
+					CreatedAt:   firstCreatedAt,
 				},
 				{
-					ID:          uuid.New(),
+					ID:          secondTaskID,
 					Title:       "Testing number 2",
 					Description: "Learning how to write tests",
 					Status:      model.StatusInProgress,
 					Priority:    model.PriorityMedium,
-					CreatedAt:   createdAt.Add(time.Hour),
-				},
-				{
-					ID:          uuid.New(),
-					Title:       "Testing number 2",
-					Description: "Learning how to write tests",
-					Status:      model.StatusInProgress,
-					Priority:    model.PriorityMedium,
-					CreatedAt:   createdAt.Add(2 * time.Hour),
+					CreatedAt:   secondCreatedAt,
 				},
 			},
 		},
@@ -81,9 +87,16 @@ func TestFileStorage_Save(t *testing.T) {
 				t.Fatalf("Save() error: %v", err)
 			}
 
-			got, err := storage.Load()
+			data, err := os.ReadFile(path)
 			if err != nil {
-				t.Fatalf("Load() error: %v", err)
+				t.Fatalf("ReadFile() error: %v", err)
+			}
+
+			var got []model.Task
+
+			err = json.Unmarshal(data, &got)
+			if err != nil {
+				t.Fatalf("Unmarshal() error: %v", err)
 			}
 
 			if !reflect.DeepEqual(got, tc.tasks) {
@@ -97,23 +110,17 @@ func TestFileStorage_Load(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "tasks.json")
 
-	storage := &FileStorage{
-		path: path,
+	storage, err := NewFileStorage(path)
+	if err != nil {
+		t.Fatalf("NewfileStorage() error: %v", err)
 	}
 
-	firstID := uuid.New()
-	secondID := uuid.New()
-
-	testCases := []struct {
-		name     string
-		data     string
-		expected []model.Task
-	}{
+	testCases := []loadTestCase{
 		{
-			name: "one task",
+			name: "single task",
 			data: `[
 			  { 
-			    "ID": "` + firstID.String() + `", 
+			    "ID": "` + firstTaskID.String() + `", 
 				"Title": "Learn testing",
 				"Description": "Learn how to write tests",
 				"Status": "ToDo",
@@ -123,12 +130,12 @@ func TestFileStorage_Load(t *testing.T) {
 		    ]`,
 			expected: []model.Task{
 				{
-					ID:          firstID,
+					ID:          firstTaskID,
 					Title:       "Learn testing",
 					Description: "Learn how to write tests",
 					Status:      model.StatusToDo,
 					Priority:    model.PriorityHigh,
-					CreatedAt:   time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC),
+					CreatedAt:   firstCreatedAt,
 				},
 			},
 		},
@@ -136,7 +143,7 @@ func TestFileStorage_Load(t *testing.T) {
 			name: "multiple tasks",
 			data: `[
 			  { 
-			    "ID": "` + firstID.String() + `", 
+			    "ID": "` + firstTaskID.String() + `", 
 				"Title": "Learn Go",
 				"Description": "Learn Go testing",
 				"Status": "ToDo",
@@ -144,7 +151,7 @@ func TestFileStorage_Load(t *testing.T) {
 				"CreatedAt": "2026-08-17T12:00:00Z"
 			  },
 			  {
-			    "ID": "` + secondID.String() + `", 
+			    "ID": "` + secondTaskID.String() + `", 
 				"Title": "Write tests",
 				"Description": "Write unit tests",
 				"Status": "In Progress",
@@ -154,25 +161,25 @@ func TestFileStorage_Load(t *testing.T) {
 		    ]`,
 			expected: []model.Task{
 				{
-					ID:          firstID,
+					ID:          firstTaskID,
 					Title:       "Learn Go",
 					Description: "Learn Go testing",
 					Status:      model.StatusToDo,
 					Priority:    model.PriorityHigh,
-					CreatedAt:   time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC),
+					CreatedAt:   firstCreatedAt,
 				},
 				{
-					ID:          secondID,
+					ID:          secondTaskID,
 					Title:       "Write tests",
 					Description: "Write unit tests",
 					Status:      model.StatusInProgress,
 					Priority:    model.PriorityMedium,
-					CreatedAt:   time.Date(2026, 8, 17, 13, 0, 0, 0, time.UTC),
+					CreatedAt:   secondCreatedAt,
 				},
 			},
 		},
 		{
-			name:     "empty task list",
+			name:     "no tasks",
 			data:     `[]`,
 			expected: []model.Task{},
 		},
