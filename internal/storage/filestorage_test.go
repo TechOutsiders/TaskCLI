@@ -82,7 +82,7 @@ func TestFileStorage_Save(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err = storage.Save(tc.tasks)
+			err := storage.Save(tc.tasks)
 			if err != nil {
 				t.Fatalf("Save() error: %v", err)
 			}
