@@ -2,24 +2,25 @@ package service
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/TechOutsiders/TaskCLI/internal/model"
 	"github.com/google/uuid"
 )
 
+// mockRepository is a test implementation of the repository interface.
 type mockRepository struct {
-	tasks         []model.Task
-	getTaskErr    error
-	createTaskErr error
-	deleteTaskErr error
-	saveTask      *model.Task
-	deleteTaskID  uuid.UUID
+	tasks        []model.Task
+	err          error
+	saveTask     *model.Task
+	deleteTaskID uuid.UUID
 }
 
+// GetTask returns a task.
 func (m *mockRepository) GetTask(id uuid.UUID) (*model.Task, error) {
-	if m.getTaskErr != nil {
-		return nil, m.getTaskErr
+	if m.err != nil {
+		return nil, m.err
 	}
 
 	for i := range m.tasks {
@@ -41,117 +42,75 @@ func TestGetTask(t *testing.T) {
 		Priority:    model.PriorityMedium,
 	}
 
-	repo := &mockRepository{
-		tasks: []model.Task{
-			expectedTask,
+	repositoryErr := errors.New("repository error")
+
+	tests := []struct {
+		name              string
+		repo              *mockRepository
+		id                uuid.UUID
+		wantErr           bool
+		wantRepositoryErr error
+	}{
+		{
+			name: "success",
+			repo: &mockRepository{
+				tasks: []model.Task{
+					expectedTask,
+				},
+			},
+			id: taskID,
+		},
+		{
+			name:    "not found",
+			repo:    &mockRepository{},
+			id:      taskID,
+			wantErr: true,
+		},
+		{
+			name: "repository error",
+			repo: &mockRepository{
+				err: repositoryErr,
+			},
+			id:                taskID,
+			wantErr:           true,
+			wantRepositoryErr: repositoryErr,
 		},
 	}
 
-	s := NewService(repo)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewService(tt.repo)
 
-	task, err := s.GetTask(taskID)
+			task, err := s.GetTask(tt.id)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("expected error: %v, got: %v", tt.wantErr, err)
+			}
 
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+			if tt.wantRepositoryErr != nil {
+				if !errors.Is(err, tt.wantRepositoryErr) {
+					t.Errorf("expected repository error %v, got %v", tt.wantRepositoryErr, err)
+				}
+			}
 
-	if task == nil {
-		t.Fatal("got nil")
-	}
+			if tt.wantErr {
+				return
+			}
 
-	if task.ID != expectedTask.ID {
-		t.Errorf(
-			"expected ID %s, got %s",
-			expectedTask.ID,
-			task.ID,
-		)
-	}
+			if task == nil {
+				t.Fatal("got nil")
+			}
 
-	if task.Title != expectedTask.Title {
-		t.Errorf(
-			"expected title %q, got %q",
-			expectedTask.Title,
-			task.Title,
-		)
-	}
-
-	if task.Description != expectedTask.Description {
-		t.Errorf(
-			"expected description %q, got %q",
-			expectedTask.Description,
-			task.Description,
-		)
-	}
-
-	if task.Status != expectedTask.Status {
-		t.Errorf(
-			"expected status %q, got %q",
-			expectedTask.Status,
-			task.Status,
-		)
-	}
-
-	if task.Priority != expectedTask.Priority {
-		t.Errorf(
-			"expected priority %q, got %q",
-			expectedTask.Priority,
-			task.Priority,
-		)
+			if !reflect.DeepEqual(*task, expectedTask) {
+				t.Errorf("expected task %+v, got %+v", expectedTask, *task)
+			}
+		})
 	}
 }
 
-func TestGetTaskNotFound(t *testing.T) {
-	repo := &mockRepository{}
-
-	s := NewService(repo)
-
-	taskID := uuid.New()
-
-	task, err := s.GetTask(taskID)
-
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-
-	if task != nil {
-		t.Errorf("expected nil task, got %v", task)
-	}
-}
-
-func TestGetTaskRepositoryError(t *testing.T) {
-	repositoryErr := errors.New("repository error")
-
-	repo := &mockRepository{
-		getTaskErr: repositoryErr,
-	}
-
-	s := NewService(repo)
-
-	task, err := s.GetTask(uuid.New())
-
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-
-	if task != nil {
-		t.Errorf("expected nil task, got %v", task)
-	}
-
-	if !errors.Is(err, repositoryErr) {
-		t.Errorf(
-			"expected repository error, got %v",
-			err,
-		)
-	}
-}
-
-func (m *mockRepository) GetTasks() ([]model.Task, error) {
-	return m.tasks, nil
-}
-
+// CreateTask saves the task received from the service.
 func (m *mockRepository) CreateTask(task *model.Task) error {
-	if m.createTaskErr != nil {
-		return m.createTaskErr
+	if m.err != nil {
+		return m.err
 	}
 
 	m.saveTask = task
@@ -159,130 +118,150 @@ func (m *mockRepository) CreateTask(task *model.Task) error {
 }
 
 func TestCreatTask(t *testing.T) {
-	repo := &mockRepository{}
-
-	s := NewService(repo)
-
-	data := &CreateTaskData{
-		Title:       "Learning Spanish",
-		Description: "First lesson: August 20, 2026",
-		Priority:    model.PriorityMedium,
-	}
-	task, err := s.CreateTask(data)
-
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if task == nil {
-		t.Fatal("got nil")
-	}
-
-	if repo.saveTask == nil {
-		t.Fatal("repository did not receive task")
-	}
-
-	if task.ID == uuid.Nil {
-		t.Error("unexpected ID")
-	}
-
-	if task.Title != data.Title {
-		t.Error("unexpected Title")
-	}
-
-	if task.Description != data.Description {
-		t.Error("unexpected Description")
-	}
-
-	if task.Priority != data.Priority {
-		t.Error("unexpected priority")
-	}
-
-	if task.Status != model.StatusInProgress {
-		t.Error("unexpected status")
-	}
-
-	if task.CreatedAt.IsZero() {
-		t.Error("unexpected CreatedAt")
-	}
-}
-
-func TestCreateTaskRepositoryError(t *testing.T) {
 	repositoryErr := errors.New("repository error")
 
-	repo := &mockRepository{
-		createTaskErr: repositoryErr,
+	tests := []struct {
+		name              string
+		repo              *mockRepository
+		data              *CreateTaskData
+		wantErr           bool
+		wantRepositoryErr error
+	}{
+		{
+			name: "success",
+			repo: &mockRepository{},
+			data: &CreateTaskData{
+				Title:       "Learning Spanish",
+				Description: "First lesson: August 20, 2026",
+				Priority:    model.PriorityMedium,
+			},
+		},
+		{
+			name: "repository error",
+			repo: &mockRepository{
+				err: repositoryErr,
+			},
+			data: &CreateTaskData{
+				Title:       "Learning Spanish",
+				Description: "First lesson",
+				Priority:    model.PriorityMedium,
+			},
+			wantErr:           true,
+			wantRepositoryErr: repositoryErr,
+		},
 	}
 
-	s := NewService(repo)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewService(tt.repo)
 
-	data := &CreateTaskData{
-		Title:       "Learning Spanish",
-		Description: "First lesson",
-		Priority:    model.PriorityMedium,
-	}
+			task, err := s.CreateTask(tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("expected error: %v, got: %v", tt.wantErr, err)
+			}
 
-	task, err := s.CreateTask(data)
+			if tt.wantRepositoryErr != nil {
+				if !errors.Is(err, tt.wantRepositoryErr) {
+					t.Errorf("expected repository error %v, got %v", tt.wantRepositoryErr, err)
+				}
+			}
 
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
+			if tt.wantErr {
+				return
+			}
 
-	if task != nil {
-		t.Errorf("expected nil task, got %v", task)
-	}
+			if task == nil {
+				t.Fatal("got nil")
+			}
 
-	if !errors.Is(err, repositoryErr) {
-		t.Errorf("expected repository error, got %v", err)
+			if task.ID == uuid.Nil {
+				t.Error("unexpected ID")
+			}
+
+			if task.Title != tt.data.Title {
+				t.Errorf("expected title %q, got %q", tt.data.Title, task.Title)
+			}
+
+			if task.Description != tt.data.Description {
+				t.Errorf("expected title %q, got %q", tt.data.Description, task.Description)
+			}
+
+			if task.Priority != tt.data.Priority {
+				t.Errorf("expected priority %q, got %q", tt.data.Priority, task.Priority)
+			}
+
+			if task.Status != model.StatusInProgress {
+				t.Errorf("unexpected status: %v", task.Status)
+			}
+
+			if task.CreatedAt.IsZero() {
+				t.Error("unexpected CreatedAt")
+			}
+		})
 	}
 }
 
+// DeleteTask stores the ID of the deleted task.
 func (m *mockRepository) DeleteTask(id uuid.UUID) error {
 	m.deleteTaskID = id
 
-	return m.deleteTaskErr
+	return m.err
 }
 
 func TestDeleteTask(t *testing.T) {
-	taskID := uuid.New()
-
-	repo := &mockRepository{}
-
-	s := NewService(repo)
-
-	err := s.DeleteTask(taskID)
-
-	if err != nil {
-		t.Fatal("an error occurred during deletion ")
-	}
-
-	if taskID != repo.deleteTaskID {
-		t.Fatal("error transmitting the Service ID to the Repository ")
-	}
-}
-
-func TestDeleteTaskError(t *testing.T) {
-	taskID := uuid.New()
-
 	repositoryErr := errors.New("repository error")
+	taskID := uuid.New()
 
-	repo := &mockRepository{
-		deleteTaskErr: repositoryErr,
+	tests := []struct {
+		name              string
+		repo              *mockRepository
+		wantErr           bool
+		wantRepositoryErr error
+	}{
+		{
+			name: "success",
+			repo: &mockRepository{},
+		},
+		{
+			name: "repository error",
+			repo: &mockRepository{
+				err: repositoryErr,
+			},
+			wantErr:           true,
+			wantRepositoryErr: repositoryErr,
+		},
 	}
 
-	s := NewService(repo)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewService(tt.repo)
 
-	err := s.DeleteTask(taskID)
+			err := s.DeleteTask(taskID)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("expected error: %v, got: %v", tt.wantErr, err)
+			}
 
-	if err == nil {
-		t.Fatal("expected error")
-	}
+			if tt.wantRepositoryErr != nil {
+				if !errors.Is(err, tt.wantRepositoryErr) {
+					t.Errorf("expected repository error %v, got %v", tt.wantRepositoryErr, err)
+				}
+			}
 
-	if !errors.Is(err, repositoryErr) {
-		t.Errorf("expected repository error, got %v", err)
+			if tt.wantErr {
+				return
+			}
+
+			if tt.repo.deleteTaskID != taskID {
+				t.Errorf("expected task ID %v, got %v", taskID, tt.repo.deleteTaskID)
+			}
+		})
 	}
 }
 
 func (m *mockRepository) UpdateTask(task *model.Task) error {
 	return nil
+}
+
+func (m *mockRepository) GetTasks() ([]model.Task, error) {
+	return m.tasks, nil
 }
