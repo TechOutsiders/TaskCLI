@@ -33,36 +33,6 @@ var (
 		Priority:    model.PriorityMedium,
 		CreatedAt:   secondCreatedAt,
 	}
-
-	oneTaskJSON = `[
-		{
-			"ID": "11111111-1111-1111-1111-111111111111",
-			"Title": "Testing",
-			"Description": "Learning how to write tests",
-			"Status": "ToDo",
-			"Priority": "HIGH",
-			"CreatedAt": "2026-08-17T12:00:00Z"
-		}
-	]`
-
-	twoTasksJSON = `[
-		{
-			"ID": "11111111-1111-1111-1111-111111111111",
-			"Title": "Testing",
-			"Description": "Learning how to write tests",
-			"Status": "ToDo",
-			"Priority": "HIGH",
-			"CreatedAt": "2026-08-17T12:00:00Z"
-		},
-		{
-			"ID": "22222222-2222-2222-2222-222222222222",
-			"Title": "Testing number 2",
-			"Description": "Learning how to write tests",
-			"Status": "In Progress",
-			"Priority": "MEDIUM",
-			"CreatedAt": "2026-08-17T13:00:00Z"
-		}
-	]`
 )
 
 func TestFileStorage_Save(t *testing.T) {
@@ -126,14 +96,40 @@ func TestFileStorage_Load(t *testing.T) {
 	}{
 		{
 			name: "single task",
-			data: oneTaskJSON,
+			data: `[
+				{
+					"ID": "` + firstTask.ID.String() + `",
+					"Title": "Testing",
+					"Description": "Learning how to write tests",
+					"Status": "ToDo",
+					"Priority": "HIGH",
+					"CreatedAt": "2026-08-17T12:00:00Z"
+				}
+			]`,
 			expected: []model.Task{
 				firstTask,
 			},
 		},
 		{
 			name: "multiple tasks",
-			data: twoTasksJSON,
+			data: `[
+				{
+					"ID": "` + firstTask.ID.String() + `",
+					"Title": "Testing",
+					"Description": "Learning how to write tests",
+					"Status": "ToDo",
+					"Priority": "HIGH",
+					"CreatedAt": "2026-08-17T12:00:00Z"
+				},
+				{
+					"ID": "` + secondTask.ID.String() + `",
+					"Title": "Testing number 2",
+					"Description": "Learning how to write tests",
+					"Status": "In Progress",
+					"Priority": "MEDIUM",
+					"CreatedAt": "2026-08-17T13:00:00Z"
+				}
+			]`,
 			expected: []model.Task{
 				firstTask,
 				secondTask,
@@ -165,6 +161,7 @@ func TestFileStorage_Load(t *testing.T) {
 	}
 }
 
+// newTestStorage creates a FileStorage instance backed by a temporary file.
 func newTestStorage(t *testing.T) (*FileStorage, string) {
 	t.Helper()
 
@@ -173,7 +170,7 @@ func newTestStorage(t *testing.T) (*FileStorage, string) {
 
 	storage, err := NewFileStorage(path)
 	if err != nil {
-		t.Fatalf("NewfileStorage() error: %v", err)
+		t.Fatalf("NewFileStorage() error: %v", err)
 	}
 
 	return storage, path
