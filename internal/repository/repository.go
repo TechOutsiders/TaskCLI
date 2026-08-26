@@ -15,7 +15,7 @@ type TasksRepository struct {
 	fileStorage *storage.FileStorage
 }
 
-// New creates a new TasksRepository.
+// New creates a new *TasksRepository instance.
 func New(fileStorage *storage.FileStorage) *TasksRepository {
 	return &TasksRepository{
 		fileStorage: fileStorage,

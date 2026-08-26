@@ -9,10 +9,10 @@ import (
 	"github.com/TechOutsiders/TaskCLI/internal/storage"
 )
 
-const storagePath = "./data/tasks.json"
-
 // Run initializes application dependencies and processes the command-line arguments.
 func Run() {
+	const storagePath = "./data/tasks.json"
+
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "command is required")
 		os.Exit(1)
