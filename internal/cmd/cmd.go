@@ -11,7 +11,7 @@ const storagePath = "./data/tasks.json"
 
 // Run initializes application dependencies and processes the command-line arguments.
 func Run(args []string) error {
-	repository, err := repository.NewTaskStorage(storagePath)
+	repository, err := repository.New(storagePath)
 	if err != nil {
 		return fmt.Errorf("creating repository: %w", err)
 	}
@@ -24,9 +24,9 @@ func Run(args []string) error {
 
 	switch args[1] {
 	case "add":
-		//TODO: implement add comand
+		// TODO: implement add comand
 	case "list":
-		//TODO: implement list comand
+		// TODO: implement list comand
 	case "show":
 		// TODO: implement show command
 	case "delete":
