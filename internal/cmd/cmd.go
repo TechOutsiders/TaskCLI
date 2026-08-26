@@ -9,6 +9,7 @@ import (
 
 const storagePath = "./data/tasks.json"
 
+// Run initializes application dependencies and processes the command-line arguments.
 func Run(args []string) error {
 	repository, err := repository.NewTaskStorage(storagePath)
 	if err != nil {
