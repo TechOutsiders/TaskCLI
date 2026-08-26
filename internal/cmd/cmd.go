@@ -43,7 +43,7 @@ func Run() {
 	case "priority":
 		// TODO: implement priority command
 	default:
-		fmt.Fprintf(os.Stderr, "creating file storage: %v\n", err)
+		fmt.Fprintf(os.Stderr, "unknown command: %s", os.Args[1])
 		os.Exit(1)
 	}
 
