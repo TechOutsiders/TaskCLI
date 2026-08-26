@@ -15,18 +15,11 @@ type TasksRepository struct {
 	fileStorage *storage.FileStorage
 }
 
-// NewTaskStorage creates a new *TaskStorage instance.
-func NewTaskStorage(path string) (*TasksRepository, error) {
-	fs, err := storage.NewFileStorage(path)
-	if err != nil {
-		return nil, fmt.Errorf("creating file storage: %w", err)
+// New creates a new TasksRepository.
+func New(fileStorage *storage.FileStorage) *TasksRepository {
+	return &TasksRepository{
+		fileStorage: fileStorage,
 	}
-
-	ts := &TasksRepository{
-		fileStorage: fs,
-	}
-
-	return ts, nil
 }
 
 var _ service.Repository = (*TasksRepository)(nil)
