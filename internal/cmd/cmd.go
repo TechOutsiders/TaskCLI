@@ -1,17 +1,20 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
+	"github.com/TechOutsiders/TaskCLI/internal/model"
 	"github.com/TechOutsiders/TaskCLI/internal/repository"
 	"github.com/TechOutsiders/TaskCLI/internal/service"
 	"github.com/TechOutsiders/TaskCLI/internal/storage"
+	"github.com/google/uuid"
 )
 
 // Run initializes application dependencies and processes the command-line arguments.
 func Run() {
-	const storagePath = "./data/tasks.json"
+	const storagePath = "../data/tasks.json"
 
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "command is required")
@@ -29,19 +32,47 @@ func Run() {
 
 	switch os.Args[1] {
 	case "add":
-		// TODO: implement add comand
+		err := handleAdd(service)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "list":
-		// TODO: implement list comand
+		err := handleList(service)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "show":
-		// TODO: implement show command
+		err := handleShow(service)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "delete":
-		// TODO: implement delete command
+		err := handleDelete(service)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "edit":
-		// TODO: implement edit command
+		err := handleEdit(service)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "status":
-		// TODO: implement status command
+		err := handleStatus(service)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "priority":
-		// TODO: implement priority command
+		err := handlePriority(service)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s", os.Args[1])
 		os.Exit(1)
@@ -49,4 +80,205 @@ func Run() {
 
 	// TODO: Use when the command handlers will be implemented.
 	_ = service
+}
+
+// handleAdd handles the add command.
+func handleAdd(s *service.Service) error {
+	if len(os.Args) != 5 {
+		return errors.New("usage: add <title> <description> <priority>")
+	}
+
+	title := os.Args[2]
+	description := os.Args[3]
+	priority := os.Args[4]
+
+	var taskPriority model.Priority
+
+	switch priority {
+	case "low":
+		taskPriority = model.PriorityLow
+	case "medium":
+		taskPriority = model.PriorityMedium
+	case "high":
+		taskPriority = model.PriorityHigh
+	default:
+		return errors.New("unknown priority")
+	}
+
+	createTaskData := &service.CreateTaskData{
+		Title:       title,
+		Description: description,
+		Priority:    taskPriority,
+	}
+
+	_, err := s.CreateTask(createTaskData)
+
+	return err
+}
+
+// handleList handles the list command.
+func handleList(s *service.Service) error {
+	if len(os.Args) != 2 {
+		return errors.New("usage: taskcli list")
+	}
+
+	tasks, err := s.GetTasks()
+	if err != nil {
+		return err
+	}
+
+	for _, task := range tasks {
+		fmt.Printf("ID: %v Status: %v Priority: %v  Title: %v \n", task.ID, task.Status, task.Priority, task.Title)
+	}
+
+	return nil
+}
+
+// handleShow handles the show command.
+func handleShow(s *service.Service) error {
+	if len(os.Args) != 3 {
+		return errors.New("usage: taskcli show <id>")
+	}
+
+	id, err := uuid.Parse(os.Args[2])
+	if err != nil {
+		return errors.New("invalid task id")
+	}
+
+	task, err := s.GetTask(id)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("ID: %v Status: %v Priority: %v Title: %v Description: %v Created: %v \n", task.ID, task.Status, task.Priority, task.Title, task.Description, task.CreatedAt)
+
+	return nil
+}
+
+// handleDelete handles the delete command.
+func handleDelete(s *service.Service) error {
+	if len(os.Args) != 3 {
+		return errors.New("usage: taskcli delete <id>")
+	}
+
+	id, err := uuid.Parse(os.Args[2])
+	if err != nil {
+		return errors.New("invalid task id")
+	}
+
+	err = s.DeleteTask(id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// handleEdit handles the edit command.
+func handleEdit(s *service.Service) error {
+	if len(os.Args) < 5 {
+		return errors.New("usage: taskcli edit <id> [--title <title>] [--description <description>]")
+	}
+
+	id, err := uuid.Parse(os.Args[2])
+	if err != nil {
+		return errors.New("invalid task id")
+	}
+
+	data := &service.UpdateTaskData{
+		ID: id,
+	}
+
+	for i := 3; i < len(os.Args); i++ {
+		switch os.Args[i] {
+		case "--title":
+			if i+1 >= len(os.Args) {
+				return errors.New("title is required")
+			}
+
+			data.Title = os.Args[i+1]
+			i++
+
+		case "--description":
+			if i+1 >= len(os.Args) {
+				return errors.New("description is required")
+			}
+
+			data.Description = os.Args[i+1]
+			i++
+
+		default:
+			return fmt.Errorf("unknown argument: %s", os.Args[i])
+		}
+	}
+
+	if data.Title == "" && data.Description == "" {
+		return errors.New("nothing to update")
+	}
+
+	return s.UpdateTask(data)
+}
+
+// handleStatus handles the status command.
+func handleStatus(s *service.Service) error {
+	if len(os.Args) != 4 {
+		return errors.New("usage: taskcli status <id> <status>")
+	}
+
+	id, err := uuid.Parse(os.Args[2])
+	if err != nil {
+		return errors.New("invalid task id")
+	}
+
+	var status model.Status
+
+	switch os.Args[3] {
+	case "todo":
+		status = model.StatusToDo
+	case "in_progress":
+		status = model.StatusInProgress
+	case "done":
+		status = model.StatusDone
+	default:
+		return errors.New("unknown status")
+	}
+
+	err = s.UpdateStatus(id, status)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// handlePriority handles the priority command.
+func handlePriority(s *service.Service) error {
+	if len(os.Args) != 4 {
+		return errors.New("usage: taskcli priority <id> <priority>")
+	}
+
+	id, err := uuid.Parse(os.Args[2])
+	if err != nil {
+		return errors.New("invalid task id")
+	}
+
+	var priority model.Priority
+
+	switch os.Args[3] {
+	case "low":
+		priority = model.PriorityLow
+	case "medium":
+		priority = model.PriorityMedium
+	case "high":
+		priority = model.PriorityHigh
+	default:
+		return errors.New("unknown priority")
+	}
+
+	err = s.UpdatePriority(id, priority)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
