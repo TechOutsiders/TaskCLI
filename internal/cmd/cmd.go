@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 
@@ -127,8 +128,11 @@ func handleList(s *service.Service) error {
 		return err
 	}
 
+	fmt.Printf("%-38s %-15s %-10s %s\n", "ID", "Status", "Priority", "Title")
+
 	for _, task := range tasks {
-		fmt.Printf("ID: %v Status: %v Priority: %v  Title: %v \n", task.ID, task.Status, task.Priority, task.Title)
+		fmt.Printf("%-38v %-15v %-10v %v\n",
+			task.ID, task.Status, task.Priority, task.Title)
 	}
 
 	return nil
@@ -150,7 +154,7 @@ func handleShow(s *service.Service) error {
 		return err
 	}
 
-	fmt.Printf("ID: %v Status: %v Priority: %v Title: %v Description: %v Created: %v \n", task.ID, task.Status, task.Priority, task.Title, task.Description, task.CreatedAt)
+	fmt.Printf("ID: %v \n Status: %v \n Priority: %v \n Title: %v \n Description: %v \n Created: %v \n", task.ID, task.Status, task.Priority, task.Title, task.Description, task.CreatedAt)
 
 	return nil
 }
@@ -176,7 +180,7 @@ func handleDelete(s *service.Service) error {
 
 // handleEdit handles the edit command.
 func handleEdit(s *service.Service) error {
-	if len(os.Args) < 5 {
+	if len(os.Args) < 3 {
 		return errors.New("usage: taskcli edit <id> [--title <title>] [--description <description>]")
 	}
 
@@ -185,35 +189,28 @@ func handleEdit(s *service.Service) error {
 		return errors.New("invalid task id")
 	}
 
-	data := &service.UpdateTaskData{
-		ID: id,
+	fs := flag.NewFlagSet("edit", flag.ContinueOnError)
+
+	title := fs.String("title", "", "task title")
+	description := fs.String("description", "", "task description")
+
+	if err := fs.Parse(os.Args[3:]); err != nil {
+		return err
 	}
 
-	for i := 3; i < len(os.Args); i++ {
-		switch os.Args[i] {
-		case "--title":
-			if i+1 >= len(os.Args) {
-				return errors.New("title is required")
-			}
+	hasUpdates := false
+	fs.Visit(func(_ *flag.Flag) {
+		hasUpdates = true
+	})
 
-			data.Title = os.Args[i+1]
-			i++
-
-		case "--description":
-			if i+1 >= len(os.Args) {
-				return errors.New("description is required")
-			}
-
-			data.Description = os.Args[i+1]
-			i++
-
-		default:
-			return fmt.Errorf("unknown argument: %s", os.Args[i])
-		}
-	}
-
-	if data.Title == "" && data.Description == "" {
+	if !hasUpdates {
 		return errors.New("nothing to update")
+	}
+
+	data := &service.UpdateTaskData{
+		ID:          id,
+		Title:       *title,
+		Description: *description,
 	}
 
 	return s.UpdateTask(data)
