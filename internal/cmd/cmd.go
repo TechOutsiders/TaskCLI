@@ -29,58 +29,29 @@ func Run() {
 	}
 
 	repository := repository.New(fileStorage)
-	service := service.NewService(repository)
+	svc := service.NewService(repository)
 
-	switch os.Args[1] {
-	case "add":
-		err := handleAdd(service)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	case "list":
-		err := handleList(service)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	case "show":
-		err := handleShow(service)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	case "delete":
-		err := handleDelete(service)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	case "edit":
-		err := handleEdit(service)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	case "status":
-		err := handleStatus(service)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	case "priority":
-		err := handlePriority(service)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	default:
-		fmt.Fprintf(os.Stderr, "unknown command: %s", os.Args[1])
+	handlers := map[string]func(*service.Service) error{
+		"add":      handleAdd,
+		"list":     handleList,
+		"show":     handleShow,
+		"delete":   handleDelete,
+		"edit":     handleEdit,
+		"status":   handleStatus,
+		"priority": handlePriority,
+	}
+
+	handler, ok := handlers[os.Args[1]]
+	if !ok {
+		fmt.Fprintf(os.Stderr, "unknown command: %s\n", os.Args[1])
 		os.Exit(1)
 	}
 
-	// TODO: Use when the command handlers will be implemented.
-	_ = service
+	err = handler(svc)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
 // handleAdd handles the add command.
