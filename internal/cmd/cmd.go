@@ -149,10 +149,13 @@ func handleDelete(s *service.Service) error {
 	return nil
 }
 
+// errIncorrectEditCmd indicates incorrect usage of the edit command.
+var errIncorrectEditCmd = errors.New("incorrect command: usage: taskcli edit <id> [--title <title>] [--description <description>]")
+
 // handleEdit handles the edit command.
 func handleEdit(s *service.Service) error {
 	if len(os.Args) < 3 {
-		return errors.New("usage: taskcli edit <id> [--title <title>] [--description <description>]")
+		return errIncorrectEditCmd
 	}
 
 	id, err := uuid.Parse(os.Args[2])
@@ -165,7 +168,8 @@ func handleEdit(s *service.Service) error {
 	title := fs.String("title", "", "task title")
 	description := fs.String("description", "", "task description")
 
-	if err := fs.Parse(os.Args[3:]); err != nil {
+	err = fs.Parse(os.Args[3:])
+	if err != nil {
 		return err
 	}
 
@@ -175,7 +179,7 @@ func handleEdit(s *service.Service) error {
 	})
 
 	if !hasUpdates {
-		return errors.New("nothing to update")
+		return errIncorrectEditCmd
 	}
 
 	data := &service.UpdateTaskData{
