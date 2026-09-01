@@ -67,6 +67,10 @@ func (f *FileStorage) Load() (tasks []model.Task, err error) {
 		return nil, fmt.Errorf("reading from file: %w", err)
 	}
 
+	if len(data) == 0 {
+		return nil, nil
+	}
+
 	err = json.Unmarshal(data, &tasks)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshaling bytes: %w", err)
