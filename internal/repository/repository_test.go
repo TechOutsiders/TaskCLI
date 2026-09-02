@@ -1,4 +1,4 @@
-package repository
+package repository_test
 
 import (
 	"errors"
@@ -7,14 +7,15 @@ import (
 	"time"
 
 	"github.com/TechOutsiders/TaskCLI/internal/model"
+	"github.com/TechOutsiders/TaskCLI/internal/repository"
 	"github.com/google/uuid"
 )
 
 // mockStorage implements the [Storage] interface for testing.
 type mockStorage struct {
-	tasks      []model.Task
 	err        error
 	savedTasks []model.Task
+	tasks      []model.Task
 }
 
 // Load implements the [Storage] interface.
@@ -29,7 +30,7 @@ func (m *mockStorage) Load() ([]model.Task, error) {
 // Save implements the [Storage] interface.
 func (m *mockStorage) Save(tasks []model.Task) error {
 	if m.err != nil {
-		return nil
+		return m.err
 	}
 
 	m.savedTasks = tasks
@@ -46,7 +47,7 @@ var (
 	secondTaskID = uuid.MustParse("22222222-2222-2222-2222-222222222222")
 	notFoundID   = uuid.MustParse("33333333-3333-3333-3333-333333333333")
 
-	firstTask = model.Task{
+	firstTask = &model.Task{
 		ID:          firstTaskID,
 		Title:       "Testing",
 		Description: "Learning how to write tests",
@@ -55,7 +56,7 @@ var (
 		CreatedAt:   firstCreatedAt,
 	}
 
-	secondTask = model.Task{
+	secondTask = &model.Task{
 		ID:          secondTaskID,
 		Title:       "Testing number 2",
 		Description: "Learning how to write tests",
@@ -63,6 +64,18 @@ var (
 		Priority:    model.PriorityMedium,
 		CreatedAt:   secondCreatedAt,
 	}
+
+	allTasks = []model.Task{
+		*firstTask,
+		*secondTask,
+	}
+
+	notFoundTask = model.Task{
+		ID:    notFoundID,
+		Title: "New task",
+	}
+
+	storageErr = errors.New("storage error")
 )
 
 func TestRepository_GetTasks(t *testing.T) {
@@ -74,15 +87,9 @@ func TestRepository_GetTasks(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "multiple tasks",
-			tasks: []model.Task{
-				firstTask,
-				secondTask,
-			},
-			expected: []model.Task{
-				firstTask,
-				secondTask,
-			},
+			name:     "multiple tasks",
+			tasks:    allTasks,
+			expected: allTasks,
 		},
 		{
 			name:     "empty task list",
@@ -91,7 +98,7 @@ func TestRepository_GetTasks(t *testing.T) {
 		},
 		{
 			name:    "storage load error",
-			err:     errors.New("storage load error"),
+			err:     storageErr,
 			wantErr: true,
 		},
 	}
@@ -103,30 +110,22 @@ func TestRepository_GetTasks(t *testing.T) {
 				err:   tc.err,
 			}
 
-			repository := New(storage)
+			repository := repository.New(storage)
 
 			got, err := repository.GetTasks()
-			if tc.wantErr {
-				if err == nil {
-					t.Fatalf("GetTasks() error = nil, want error")
-				}
-
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("GetTasks() error: %v", err)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("GetTasks() error = %v, wantErr %v", err, tc.wantErr)
 			}
 
 			if !reflect.DeepEqual(got, tc.expected) {
 				t.Errorf("GetTasks() = %+v, want %+v", got, tc.expected)
 			}
-
 		})
 	}
 }
 
 func TestRepository_GetTask(t *testing.T) {
+	// TODO: field alignment
 	testCases := []struct {
 		name     string
 		id       uuid.UUID
@@ -136,27 +135,21 @@ func TestRepository_GetTask(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "task found",
-			id:   firstTaskID,
-			tasks: []model.Task{
-				firstTask,
-				secondTask,
-			},
-			expected: &firstTask,
+			name:     "task found",
+			id:       firstTaskID,
+			tasks:    allTasks,
+			expected: firstTask,
 		},
 		{
-			name: "task not found",
-			id:   notFoundID,
-			tasks: []model.Task{
-				firstTask,
-				secondTask,
-			},
+			name:    "task not found",
+			id:      notFoundID,
+			tasks:   allTasks,
 			wantErr: true,
 		},
 		{
 			name:    "storage load error",
 			id:      firstTaskID,
-			err:     errors.New("storage error"),
+			err:     storageErr,
 			wantErr: true,
 		},
 	}
@@ -168,19 +161,11 @@ func TestRepository_GetTask(t *testing.T) {
 				err:   tc.err,
 			}
 
-			repository := New(storage)
+			repository := repository.New(storage)
 
 			got, err := repository.GetTask(tc.id)
-			if tc.wantErr {
-				if err == nil {
-					t.Fatal("GetTask() error = nil, want error")
-				}
-
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("GetTask() error: %v", err)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("GetTask() error = %v, wantErr %v", err, tc.wantErr)
 			}
 
 			if !reflect.DeepEqual(got, tc.expected) {
@@ -202,35 +187,26 @@ func TestRepository_CreateTask(t *testing.T) {
 		{
 			name: "create task",
 			tasks: []model.Task{
-				firstTask,
+				*firstTask,
 			},
-			task: secondTask,
+			task: *secondTask,
 			expectedTasks: []model.Task{
-				firstTask,
-				secondTask,
+				*firstTask,
+				*secondTask,
 			},
 		},
 		{
 			name: "duplicate task ID",
 			tasks: []model.Task{
-				firstTask,
+				*firstTask,
 			},
-			task:    firstTask,
+			task:    *firstTask,
 			wantErr: true,
 		},
 		{
 			name:    "storage load error",
-			task:    firstTask,
-			err:     errors.New("storage error"),
-			wantErr: true,
-		},
-		{
-			name: "storage save error",
-			tasks: []model.Task{
-				firstTask,
-			},
-			task:    secondTask,
-			err:     errors.New("storage error"),
+			task:    *firstTask,
+			err:     storageErr,
 			wantErr: true,
 		},
 	}
@@ -242,32 +218,26 @@ func TestRepository_CreateTask(t *testing.T) {
 				err:   tc.err,
 			}
 
-			repository := New(storage)
+			repository := repository.New(storage)
 
 			err := repository.CreateTask(&tc.task)
-			if tc.wantErr {
-				if err == nil {
-					t.Fatal("CreateTask() error = nil, want error")
-				}
-
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("CreateTask() error: %v", err)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("CreateTask() error = %v, wantErr %v", err, tc.wantErr)
 			}
 
 			if !reflect.DeepEqual(storage.savedTasks, tc.expectedTasks) {
 				t.Errorf(
 					"savedTasks = %+v, want %+v",
 					storage.savedTasks,
-					tc.expectedTasks)
+					tc.expectedTasks,
+				)
 			}
 		})
 	}
 }
 
 func TestRepository_DeleteTask(t *testing.T) {
+	// TODO: field alignment
 	testCases := []struct {
 		name          string
 		id            uuid.UUID
@@ -280,36 +250,23 @@ func TestRepository_DeleteTask(t *testing.T) {
 			name: "delete task",
 			id:   firstTaskID,
 			tasks: []model.Task{
-				firstTask,
-				secondTask,
+				*firstTask,
+				*secondTask,
 			},
 			expectedTasks: []model.Task{
-				secondTask,
+				*secondTask,
 			},
 		},
 		{
-			name: "task not found",
-			id:   notFoundID,
-			tasks: []model.Task{
-				firstTask,
-				secondTask,
-			},
+			name:    "task not found",
+			id:      notFoundID,
+			tasks:   allTasks,
 			wantErr: true,
 		},
 		{
 			name:    "storage load error",
 			id:      firstTaskID,
-			err:     errors.New("storage error"),
-			wantErr: true,
-		},
-		{
-			name: "storage save error",
-			id:   firstTaskID,
-			tasks: []model.Task{
-				firstTask,
-				secondTask,
-			},
-			err:     errors.New("storage error"),
+			err:     storageErr,
 			wantErr: true,
 		},
 	}
@@ -321,20 +278,11 @@ func TestRepository_DeleteTask(t *testing.T) {
 				err:   tc.err,
 			}
 
-			repository := New(storage)
+			repository := repository.New(storage)
 
 			err := repository.DeleteTask(tc.id)
-
-			if tc.wantErr {
-				if err == nil {
-					t.Fatal("DeleteTask() error = nil, want error")
-				}
-
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("DeleteTask() error: %v", err)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("DeleteTask() error = %v, wantErr %v", err, tc.wantErr)
 			}
 
 			if !reflect.DeepEqual(storage.savedTasks, tc.expectedTasks) {
@@ -349,88 +297,59 @@ func TestRepository_DeleteTask(t *testing.T) {
 }
 
 func TestRepository_UpdateTask(t *testing.T) {
-	updatedTask := firstTask
-	updatedTask.Title = "Updated title"
-	updatedTask.Description = "Updated description"
-	updatedTask.Status = model.StatusDone
-	updatedTask.Priority = model.PriorityLow
+	updatedTask := model.Task{
+		ID:          firstTask.ID,
+		Title:       "Updated title",
+		Description: "Updated description",
+		Status:      model.StatusDone,
+		Priority:    model.PriorityLow,
+	}
 
 	testCases := []struct {
 		name          string
-		tasks         []model.Task
 		task          model.Task
-		err           error
+		storageErr    error
 		expectedTasks []model.Task
 		wantErr       bool
 	}{
 		{
 			name: "update task",
-			tasks: []model.Task{
-				firstTask,
-				secondTask,
-			},
 			task: updatedTask,
 			expectedTasks: []model.Task{
 				updatedTask,
-				secondTask,
+				*secondTask,
 			},
 		},
 		{
-			name: "task not found",
-			tasks: []model.Task{
-				firstTask,
-				secondTask,
-			},
-			task: model.Task{
-				ID:    notFoundID,
-				Title: "New task",
-			},
+			name:    "task not found",
+			task:    notFoundTask,
 			wantErr: true,
 		},
 		{
-			name:    "storage load error",
-			task:    firstTask,
-			err:     errors.New("storage error"),
-			wantErr: true,
-		},
-		{
-			name: "storage save error",
-			tasks: []model.Task{
-				firstTask,
-				secondTask,
-			},
-			task:    updatedTask,
-			err:     errors.New("storage error"),
-			wantErr: true,
+			name:       "storage load error",
+			task:       updatedTask,
+			storageErr: storageErr,
+			wantErr:    true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			storage := &mockStorage{
-				tasks: tc.tasks,
-				err:   tc.err,
+				tasks: []model.Task{*firstTask, *secondTask},
+				err:   tc.storageErr,
 			}
 
-			repository := New(storage)
+			repository := repository.New(storage)
 
 			err := repository.UpdateTask(&tc.task)
-
-			if tc.wantErr {
-				if err == nil {
-					t.Fatal("UpdateTask() error = nil, want error")
-				}
-
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("UpdateTask() error: %v", err)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("UpdateTask() error = %v, wantErr %v", err, tc.wantErr)
 			}
 
 			if !reflect.DeepEqual(storage.savedTasks, tc.expectedTasks) {
 				t.Errorf(
-					"savedTasks = %+v, want %+v",
+					"got = %+v, want %+v",
 					storage.savedTasks,
 					tc.expectedTasks,
 				)
