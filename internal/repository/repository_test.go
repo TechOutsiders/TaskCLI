@@ -17,7 +17,7 @@ type mockStorage struct {
 	savedTasks []model.Task
 }
 
-// Load returns predefined tasks or an error.
+// Load implements the [Storage] interface.
 func (m *mockStorage) Load() ([]model.Task, error) {
 	if m.err != nil {
 		return nil, m.err
