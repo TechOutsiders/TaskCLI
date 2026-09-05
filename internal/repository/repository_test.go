@@ -11,14 +11,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// mockStorage implements the [Storage] interface for testing.
+// mockStorage implements the [repository.Storage] interface for testing.
 type mockStorage struct {
 	err        error
 	savedTasks []model.Task
 	tasks      []model.Task
 }
 
-// Load implements the [Storage] interface.
+// Load implements the [repository.Storage] interface.
 func (m *mockStorage) Load() ([]model.Task, error) {
 	if m.err != nil {
 		return nil, m.err
@@ -27,7 +27,7 @@ func (m *mockStorage) Load() ([]model.Task, error) {
 	return m.tasks, nil
 }
 
-// Save implements the [Storage] interface.
+// Save implements the [repository.Storage] interface.
 func (m *mockStorage) Save(tasks []model.Task) error {
 	if m.err != nil {
 		return m.err
@@ -39,6 +39,8 @@ func (m *mockStorage) Save(tasks []model.Task) error {
 }
 
 // Shared test data
+//
+// TODO: Move shared test data to a separate `cli_test` package.
 var (
 	firstCreatedAt  = time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
 	secondCreatedAt = time.Date(2026, 8, 17, 13, 0, 0, 0, time.UTC)
@@ -47,7 +49,7 @@ var (
 	secondTaskID = uuid.MustParse("22222222-2222-2222-2222-222222222222")
 	notFoundID   = uuid.MustParse("33333333-3333-3333-3333-333333333333")
 
-	firstTask = &model.Task{
+	firstTask = model.Task{
 		ID:          firstTaskID,
 		Title:       "Testing",
 		Description: "Learning how to write tests",
@@ -56,7 +58,7 @@ var (
 		CreatedAt:   firstCreatedAt,
 	}
 
-	secondTask = &model.Task{
+	secondTask = model.Task{
 		ID:          secondTaskID,
 		Title:       "Testing number 2",
 		Description: "Learning how to write tests",
@@ -85,12 +87,12 @@ func TestRepository_GetTasks(t *testing.T) {
 		{
 			name: "multiple tasks",
 			tasks: []model.Task{
-				*firstTask,
-				*secondTask,
+				firstTask,
+				secondTask,
 			},
 			expected: []model.Task{
-				*firstTask,
-				*secondTask,
+				firstTask,
+				secondTask,
 			},
 		},
 		{
@@ -120,7 +122,11 @@ func TestRepository_GetTasks(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(got, tc.expected) {
-				t.Errorf("GetTasks() = %+v, want %+v", got, tc.expected)
+				t.Errorf(
+					"got = %+v, want %+v",
+					got,
+					tc.expected,
+				)
 			}
 		})
 	}
@@ -139,17 +145,17 @@ func TestRepository_GetTask(t *testing.T) {
 			name: "task found",
 			id:   firstTaskID,
 			tasks: []model.Task{
-				*firstTask,
-				*secondTask,
+				firstTask,
+				secondTask,
 			},
-			expected: firstTask,
+			expected: &firstTask,
 		},
 		{
 			name: "task not found",
 			id:   notFoundID,
 			tasks: []model.Task{
-				*firstTask,
-				*secondTask,
+				firstTask,
+				secondTask,
 			},
 			wantErr: true,
 		},
@@ -176,7 +182,11 @@ func TestRepository_GetTask(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(got, tc.expected) {
-				t.Errorf("GetTask() = %+v, want %+v", got, tc.expected)
+				t.Errorf(
+					"got = %+v, want %+v",
+					got,
+					tc.expected,
+				)
 			}
 		})
 	}
@@ -194,25 +204,25 @@ func TestRepository_CreateTask(t *testing.T) {
 		{
 			name: "create task",
 			tasks: []model.Task{
-				*firstTask,
+				firstTask,
 			},
-			task: *secondTask,
+			task: secondTask,
 			expectedTasks: []model.Task{
-				*firstTask,
-				*secondTask,
+				firstTask,
+				secondTask,
 			},
 		},
 		{
 			name: "duplicate task ID",
 			tasks: []model.Task{
-				*firstTask,
+				firstTask,
 			},
-			task:    *firstTask,
+			task:    firstTask,
 			wantErr: true,
 		},
 		{
 			name:    "storage error",
-			task:    *firstTask,
+			task:    firstTask,
 			err:     storageErr,
 			wantErr: true,
 		},
@@ -234,7 +244,7 @@ func TestRepository_CreateTask(t *testing.T) {
 
 			if !reflect.DeepEqual(storage.savedTasks, tc.expectedTasks) {
 				t.Errorf(
-					"savedTasks = %+v, want %+v",
+					"got = %+v, want %+v",
 					storage.savedTasks,
 					tc.expectedTasks,
 				)
@@ -256,19 +266,19 @@ func TestRepository_DeleteTask(t *testing.T) {
 			name: "delete task",
 			id:   firstTaskID,
 			tasks: []model.Task{
-				*firstTask,
-				*secondTask,
+				firstTask,
+				secondTask,
 			},
 			expectedTasks: []model.Task{
-				*secondTask,
+				secondTask,
 			},
 		},
 		{
 			name: "task not found",
 			id:   notFoundID,
 			tasks: []model.Task{
-				*firstTask,
-				*secondTask,
+				firstTask,
+				secondTask,
 			},
 			wantErr: true,
 		},
@@ -296,7 +306,7 @@ func TestRepository_DeleteTask(t *testing.T) {
 
 			if !reflect.DeepEqual(storage.savedTasks, tc.expectedTasks) {
 				t.Errorf(
-					"savedTasks = %+v, want %+v",
+					"got = %+v, want %+v",
 					storage.savedTasks,
 					tc.expectedTasks,
 				)
@@ -312,6 +322,7 @@ func TestRepository_UpdateTask(t *testing.T) {
 		Description: "Updated description",
 		Status:      model.StatusDone,
 		Priority:    model.PriorityLow,
+		CreatedAt:   firstCreatedAt,
 	}
 
 	testCases := []struct {
@@ -326,7 +337,7 @@ func TestRepository_UpdateTask(t *testing.T) {
 			task: updatedTask,
 			expectedTasks: []model.Task{
 				updatedTask,
-				*secondTask,
+				secondTask,
 			},
 		},
 		{
@@ -345,7 +356,7 @@ func TestRepository_UpdateTask(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			storage := &mockStorage{
-				tasks: []model.Task{*firstTask, *secondTask},
+				tasks: []model.Task{firstTask, secondTask},
 				err:   tc.storageErr,
 			}
 
