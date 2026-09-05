@@ -125,13 +125,12 @@ func TestRepository_GetTasks(t *testing.T) {
 }
 
 func TestRepository_GetTask(t *testing.T) {
-	// TODO: field alignment
 	testCases := []struct {
-		name     string
-		id       uuid.UUID
-		tasks    []model.Task
 		err      error
 		expected *model.Task
+		name     string
+		tasks    []model.Task
+		id       uuid.UUID
 		wantErr  bool
 	}{
 		{
@@ -237,13 +236,12 @@ func TestRepository_CreateTask(t *testing.T) {
 }
 
 func TestRepository_DeleteTask(t *testing.T) {
-	// TODO: field alignment
 	testCases := []struct {
-		name          string
-		id            uuid.UUID
-		tasks         []model.Task
 		err           error
+		name          string
+		tasks         []model.Task
 		expectedTasks []model.Task
+		id            uuid.UUID
 		wantErr       bool
 	}{
 		{
