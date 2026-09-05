@@ -65,18 +65,14 @@ var (
 		CreatedAt:   secondCreatedAt,
 	}
 
-	allTasks = []model.Task{
-		*firstTask,
-		*secondTask,
-	}
-
 	notFoundTask = model.Task{
 		ID:    notFoundID,
 		Title: "New task",
 	}
-
-	storageErr = errors.New("storage error")
 )
+
+// storageErr is used to simulate a storage error in repository tests.
+var storageErr = errors.New("storage error")
 
 func TestRepository_GetTasks(t *testing.T) {
 	testCases := []struct {
@@ -87,9 +83,15 @@ func TestRepository_GetTasks(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:     "multiple tasks",
-			tasks:    allTasks,
-			expected: allTasks,
+			name: "multiple tasks",
+			tasks: []model.Task{
+				*firstTask,
+				*secondTask,
+			},
+			expected: []model.Task{
+				*firstTask,
+				*secondTask,
+			},
 		},
 		{
 			name:     "empty task list",
@@ -97,7 +99,7 @@ func TestRepository_GetTasks(t *testing.T) {
 			expected: []model.Task{},
 		},
 		{
-			name:    "storage load error",
+			name:    "storage error",
 			err:     storageErr,
 			wantErr: true,
 		},
@@ -134,19 +136,25 @@ func TestRepository_GetTask(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:     "task found",
-			id:       firstTaskID,
-			tasks:    allTasks,
+			name: "task found",
+			id:   firstTaskID,
+			tasks: []model.Task{
+				*firstTask,
+				*secondTask,
+			},
 			expected: firstTask,
 		},
 		{
-			name:    "task not found",
-			id:      notFoundID,
-			tasks:   allTasks,
+			name: "task not found",
+			id:   notFoundID,
+			tasks: []model.Task{
+				*firstTask,
+				*secondTask,
+			},
 			wantErr: true,
 		},
 		{
-			name:    "storage load error",
+			name:    "storage error",
 			id:      firstTaskID,
 			err:     storageErr,
 			wantErr: true,
@@ -203,7 +211,7 @@ func TestRepository_CreateTask(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "storage load error",
+			name:    "storage error",
 			task:    *firstTask,
 			err:     storageErr,
 			wantErr: true,
@@ -256,13 +264,16 @@ func TestRepository_DeleteTask(t *testing.T) {
 			},
 		},
 		{
-			name:    "task not found",
-			id:      notFoundID,
-			tasks:   allTasks,
+			name: "task not found",
+			id:   notFoundID,
+			tasks: []model.Task{
+				*firstTask,
+				*secondTask,
+			},
 			wantErr: true,
 		},
 		{
-			name:    "storage load error",
+			name:    "storage error",
 			id:      firstTaskID,
 			err:     storageErr,
 			wantErr: true,
@@ -324,7 +335,7 @@ func TestRepository_UpdateTask(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:       "storage load error",
+			name:       "storage error",
 			task:       updatedTask,
 			storageErr: storageErr,
 			wantErr:    true,
