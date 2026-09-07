@@ -40,7 +40,7 @@ func (m *mockStorage) Save(tasks []model.Task) error {
 
 // Shared test data
 //
-// TODO: Move shared test data to a separate `cli_test` package.
+// TODO: Move to internal/testutil
 var (
 	firstCreatedAt  = time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
 	secondCreatedAt = time.Date(2026, 8, 17, 13, 0, 0, 0, time.UTC)
@@ -142,7 +142,7 @@ func TestRepository_GetTask(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "task found",
+			name: "success found",
 			id:   firstTaskID,
 			tasks: []model.Task{
 				firstTask,
@@ -202,7 +202,7 @@ func TestRepository_CreateTask(t *testing.T) {
 		wantErr       bool
 	}{
 		{
-			name: "create task",
+			name: "success creating",
 			tasks: []model.Task{
 				firstTask,
 			},
@@ -263,7 +263,7 @@ func TestRepository_DeleteTask(t *testing.T) {
 		wantErr       bool
 	}{
 		{
-			name: "delete task",
+			name: "success deleting",
 			id:   firstTaskID,
 			tasks: []model.Task{
 				firstTask,
@@ -333,7 +333,7 @@ func TestRepository_UpdateTask(t *testing.T) {
 		wantErr       bool
 	}{
 		{
-			name: "update task",
+			name: "success updating",
 			task: updatedTask,
 			expectedTasks: []model.Task{
 				updatedTask,
