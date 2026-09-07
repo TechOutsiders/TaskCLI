@@ -1,4 +1,4 @@
-package storage
+package storage_test
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TechOutsiders/TaskCLI/internal/model"
+	"github.com/TechOutsiders/TaskCLI/internal/storage"
 	"github.com/google/uuid"
 )
 
@@ -162,13 +163,13 @@ func TestFileStorage_Load(t *testing.T) {
 }
 
 // newTestStorage creates a FileStorage instance backed by a temporary file.
-func newTestStorage(t *testing.T) (*FileStorage, string) {
+func newTestStorage(t *testing.T) (*storage.FileStorage, string) {
 	t.Helper()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "tasks.json")
 
-	storage, err := NewFileStorage(path)
+	storage, err := storage.NewFileStorage(path)
 	if err != nil {
 		t.Fatalf("NewFileStorage() error: %v", err)
 	}
