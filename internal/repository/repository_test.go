@@ -1,6 +1,7 @@
 package repository_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -37,6 +38,9 @@ func (m *mockStorage) Save(tasks []model.Task) error {
 	return nil
 }
 
+// storageErr is used to simulate a storage error in repository tests.
+var storageErr = errors.New("storage error")
+
 func TestRepository_GetTasks(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -63,7 +67,7 @@ func TestRepository_GetTasks(t *testing.T) {
 		},
 		{
 			name:    "storage error",
-			err:     testutil.StorageErr,
+			err:     storageErr,
 			wantErr: true,
 		},
 	}
@@ -123,7 +127,7 @@ func TestRepository_GetTask(t *testing.T) {
 		{
 			name:    "storage error",
 			id:      testutil.FirstTaskID,
-			err:     testutil.StorageErr,
+			err:     storageErr,
 			wantErr: true,
 		},
 	}
@@ -184,7 +188,7 @@ func TestRepository_CreateTask(t *testing.T) {
 		{
 			name:    "storage error",
 			task:    testutil.FirstTask,
-			err:     testutil.StorageErr,
+			err:     storageErr,
 			wantErr: true,
 		},
 	}
@@ -246,7 +250,7 @@ func TestRepository_DeleteTask(t *testing.T) {
 		{
 			name:    "storage error",
 			id:      testutil.FirstTaskID,
-			err:     testutil.StorageErr,
+			err:     storageErr,
 			wantErr: true,
 		},
 	}
@@ -309,7 +313,7 @@ func TestRepository_UpdateTask(t *testing.T) {
 		{
 			name:       "storage error",
 			task:       updatedTask,
-			storageErr: testutil.StorageErr,
+			storageErr: storageErr,
 			wantErr:    true,
 		},
 	}

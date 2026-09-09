@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"errors"
 	"time"
 
 	"github.com/TechOutsiders/TaskCLI/internal/model"
@@ -40,6 +39,3 @@ var (
 		Title: "New task",
 	}
 )
-
-// StorageErr is used to simulate a storage error in repository tests.
-var StorageErr = errors.New("storage error")
