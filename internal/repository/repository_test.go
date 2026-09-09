@@ -4,10 +4,10 @@ import (
 	"errors"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/TechOutsiders/TaskCLI/internal/model"
 	"github.com/TechOutsiders/TaskCLI/internal/repository"
+	"github.com/TechOutsiders/TaskCLI/internal/testutil"
 	"github.com/google/uuid"
 )
 
@@ -38,41 +38,6 @@ func (m *mockStorage) Save(tasks []model.Task) error {
 	return nil
 }
 
-// Shared test data
-//
-// TODO: Move to internal/testutil
-var (
-	firstCreatedAt  = time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
-	secondCreatedAt = time.Date(2026, 8, 17, 13, 0, 0, 0, time.UTC)
-
-	firstTaskID  = uuid.MustParse("11111111-1111-1111-1111-111111111111")
-	secondTaskID = uuid.MustParse("22222222-2222-2222-2222-222222222222")
-	notFoundID   = uuid.MustParse("33333333-3333-3333-3333-333333333333")
-
-	firstTask = model.Task{
-		ID:          firstTaskID,
-		Title:       "Testing",
-		Description: "Learning how to write tests",
-		Status:      model.StatusToDo,
-		Priority:    model.PriorityHigh,
-		CreatedAt:   firstCreatedAt,
-	}
-
-	secondTask = model.Task{
-		ID:          secondTaskID,
-		Title:       "Testing number 2",
-		Description: "Learning how to write tests",
-		Status:      model.StatusInProgress,
-		Priority:    model.PriorityMedium,
-		CreatedAt:   secondCreatedAt,
-	}
-
-	notFoundTask = model.Task{
-		ID:    notFoundID,
-		Title: "New task",
-	}
-)
-
 // storageErr is used to simulate a storage error in repository tests.
 var storageErr = errors.New("storage error")
 
@@ -87,12 +52,12 @@ func TestRepository_GetTasks(t *testing.T) {
 		{
 			name: "multiple tasks",
 			tasks: []model.Task{
-				firstTask,
-				secondTask,
+				testutil.FirstTask,
+				testutil.SecondTask,
 			},
 			expected: []model.Task{
-				firstTask,
-				secondTask,
+				testutil.FirstTask,
+				testutil.SecondTask,
 			},
 		},
 		{
@@ -143,25 +108,25 @@ func TestRepository_GetTask(t *testing.T) {
 	}{
 		{
 			name: "success found",
-			id:   firstTaskID,
+			id:   testutil.FirstTaskID,
 			tasks: []model.Task{
-				firstTask,
-				secondTask,
+				testutil.FirstTask,
+				testutil.SecondTask,
 			},
-			expected: &firstTask,
+			expected: &testutil.FirstTask,
 		},
 		{
 			name: "task not found",
-			id:   notFoundID,
+			id:   testutil.NotFoundID,
 			tasks: []model.Task{
-				firstTask,
-				secondTask,
+				testutil.FirstTask,
+				testutil.SecondTask,
 			},
 			wantErr: true,
 		},
 		{
 			name:    "storage error",
-			id:      firstTaskID,
+			id:      testutil.FirstTaskID,
 			err:     storageErr,
 			wantErr: true,
 		},
@@ -204,25 +169,25 @@ func TestRepository_CreateTask(t *testing.T) {
 		{
 			name: "success creating",
 			tasks: []model.Task{
-				firstTask,
+				testutil.FirstTask,
 			},
-			task: secondTask,
+			task: testutil.SecondTask,
 			expectedTasks: []model.Task{
-				firstTask,
-				secondTask,
+				testutil.FirstTask,
+				testutil.SecondTask,
 			},
 		},
 		{
 			name: "duplicate task ID",
 			tasks: []model.Task{
-				firstTask,
+				testutil.FirstTask,
 			},
-			task:    firstTask,
+			task:    testutil.FirstTask,
 			wantErr: true,
 		},
 		{
 			name:    "storage error",
-			task:    firstTask,
+			task:    testutil.FirstTask,
 			err:     storageErr,
 			wantErr: true,
 		},
@@ -264,27 +229,27 @@ func TestRepository_DeleteTask(t *testing.T) {
 	}{
 		{
 			name: "success deleting",
-			id:   firstTaskID,
+			id:   testutil.FirstTaskID,
 			tasks: []model.Task{
-				firstTask,
-				secondTask,
+				testutil.FirstTask,
+				testutil.SecondTask,
 			},
 			expectedTasks: []model.Task{
-				secondTask,
+				testutil.SecondTask,
 			},
 		},
 		{
 			name: "task not found",
-			id:   notFoundID,
+			id:   testutil.NotFoundID,
 			tasks: []model.Task{
-				firstTask,
-				secondTask,
+				testutil.FirstTask,
+				testutil.SecondTask,
 			},
 			wantErr: true,
 		},
 		{
 			name:    "storage error",
-			id:      firstTaskID,
+			id:      testutil.FirstTaskID,
 			err:     storageErr,
 			wantErr: true,
 		},
@@ -317,12 +282,12 @@ func TestRepository_DeleteTask(t *testing.T) {
 
 func TestRepository_UpdateTask(t *testing.T) {
 	updatedTask := model.Task{
-		ID:          firstTask.ID,
+		ID:          testutil.FirstTaskID,
 		Title:       "Updated title",
 		Description: "Updated description",
 		Status:      model.StatusDone,
 		Priority:    model.PriorityLow,
-		CreatedAt:   firstCreatedAt,
+		CreatedAt:   testutil.FirstCreatedAt,
 	}
 
 	testCases := []struct {
@@ -337,12 +302,12 @@ func TestRepository_UpdateTask(t *testing.T) {
 			task: updatedTask,
 			expectedTasks: []model.Task{
 				updatedTask,
-				secondTask,
+				testutil.SecondTask,
 			},
 		},
 		{
 			name:    "task not found",
-			task:    notFoundTask,
+			task:    testutil.NotFoundTask,
 			wantErr: true,
 		},
 		{
@@ -356,7 +321,7 @@ func TestRepository_UpdateTask(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			storage := &mockStorage{
-				tasks: []model.Task{firstTask, secondTask},
+				tasks: []model.Task{testutil.FirstTask, testutil.SecondTask},
 				err:   tc.storageErr,
 			}
 

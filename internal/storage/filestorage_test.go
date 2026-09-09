@@ -6,34 +6,10 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/TechOutsiders/TaskCLI/internal/model"
 	"github.com/TechOutsiders/TaskCLI/internal/storage"
-	"github.com/google/uuid"
-)
-
-// Shared test data
-var (
-	firstCreatedAt  = time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
-	secondCreatedAt = time.Date(2026, 8, 17, 13, 0, 0, 0, time.UTC)
-
-	firstTask = model.Task{
-		ID:          uuid.MustParse("11111111-1111-1111-1111-111111111111"),
-		Title:       "Testing",
-		Description: "Learning how to write tests",
-		Status:      model.StatusToDo,
-		Priority:    model.PriorityHigh,
-		CreatedAt:   firstCreatedAt,
-	}
-	secondTask = model.Task{
-		ID:          uuid.MustParse("22222222-2222-2222-2222-222222222222"),
-		Title:       "Testing number 2",
-		Description: "Learning how to write tests",
-		Status:      model.StatusInProgress,
-		Priority:    model.PriorityMedium,
-		CreatedAt:   secondCreatedAt,
-	}
+	"github.com/TechOutsiders/TaskCLI/internal/testutil"
 )
 
 func TestFileStorage_Save(t *testing.T) {
@@ -46,14 +22,14 @@ func TestFileStorage_Save(t *testing.T) {
 		{
 			name: "single task",
 			tasks: []model.Task{
-				firstTask,
+				testutil.FirstTask,
 			},
 		},
 		{
 			name: "multiple tasks",
 			tasks: []model.Task{
-				firstTask,
-				secondTask,
+				testutil.FirstTask,
+				testutil.SecondTask,
 			},
 		},
 		{
@@ -81,7 +57,7 @@ func TestFileStorage_Save(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(got, tc.tasks) {
-				t.Errorf("tasks = %+v, want = %+v", got, tc.tasks)
+				t.Errorf("got = %+v, want %+v", got, tc.tasks)
 			}
 		})
 	}
@@ -99,7 +75,7 @@ func TestFileStorage_Load(t *testing.T) {
 			name: "single task",
 			data: `[
 				{
-					"ID": "` + firstTask.ID.String() + `",
+					"ID": "` + testutil.FirstTask.ID.String() + `",
 					"Title": "Testing",
 					"Description": "Learning how to write tests",
 					"Status": "ToDo",
@@ -108,14 +84,14 @@ func TestFileStorage_Load(t *testing.T) {
 				}
 			]`,
 			expected: []model.Task{
-				firstTask,
+				testutil.FirstTask,
 			},
 		},
 		{
 			name: "multiple tasks",
 			data: `[
 				{
-					"ID": "` + firstTask.ID.String() + `",
+					"ID": "` + testutil.FirstTask.ID.String() + `",
 					"Title": "Testing",
 					"Description": "Learning how to write tests",
 					"Status": "ToDo",
@@ -123,7 +99,7 @@ func TestFileStorage_Load(t *testing.T) {
 					"CreatedAt": "2026-08-17T12:00:00Z"
 				},
 				{
-					"ID": "` + secondTask.ID.String() + `",
+					"ID": "` + testutil.SecondTask.ID.String() + `",
 					"Title": "Testing number 2",
 					"Description": "Learning how to write tests",
 					"Status": "In Progress",
@@ -132,8 +108,8 @@ func TestFileStorage_Load(t *testing.T) {
 				}
 			]`,
 			expected: []model.Task{
-				firstTask,
-				secondTask,
+				testutil.FirstTask,
+				testutil.SecondTask,
 			},
 		},
 		{
@@ -156,7 +132,7 @@ func TestFileStorage_Load(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(got, tc.expected) {
-				t.Errorf("Load() = %+v, want %+v", got, tc.expected)
+				t.Errorf("got = %+v, want %+v", got, tc.expected)
 			}
 		})
 	}
